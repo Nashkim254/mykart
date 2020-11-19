@@ -1,13 +1,19 @@
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eva_icons_flutter/eva_icons_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mykart/widgets/all_pdt.dart';
 import 'package:mykart/widgets/categoryItem.dart';
+import 'package:mykart/widgets/sales_person.dart';
 
 class HomePage extends StatelessWidget {
- final GlobalKey<ScaffoldState> drawerKey = GlobalKey();
- final List bannerAdSlider = [
+  final FirebaseAuth auth;
+  final FirebaseFirestore firestore;
+  HomePage({this.auth, this.firestore});
+  final GlobalKey<ScaffoldState> drawerKey = GlobalKey();
+  final List bannerAdSlider = [
     "assets/banner1.jpg",
     "assets/banner2.jpg",
     "assets/banner3.jpg",
@@ -81,12 +87,8 @@ class HomePage extends StatelessWidget {
               ),
               currentAccountPicture: ClipRRect(
                 borderRadius: BorderRadius.circular(70),
-                child: Image(
-                  image: NetworkImage(
-                      "https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"),
-                  width: 70,
-                  height: 70,
-                  fit: BoxFit.cover,
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
                 ),
               ),
             ),
@@ -94,7 +96,7 @@ class HomePage extends StatelessWidget {
             ListTile(
               title: Text("Home"),
               leading: Icon(EvaIcons.homeOutline),
-              onTap: (){
+              onTap: () {
                 Navigator.pop(context);
               },
             ),
@@ -102,24 +104,25 @@ class HomePage extends StatelessWidget {
             ListTile(
               title: Text("Account"),
               leading: Icon(EvaIcons.personOutline),
-              onTap: (){
+              onTap: () {
                 Navigator.pushNamed(context, '');
               },
             ),
             SizedBox(height: 10),
             ListTile(
-              title: Text("Electronics"),
-              leading: Icon(EvaIcons.bulbOutline),
-              onTap: (){
+              title: Text("Admin"),
+              leading: Icon(Icons.account_circle),
+              onTap: () {
                 Navigator.pushNamed(context, '');
               },
             ),
             SizedBox(height: 10),
             ListTile(
-              title: Text("Fashion"),
-              leading: Icon(EvaIcons.heartOutline),
-              onTap: (){
-                Navigator.pushNamed(context, '');
+              title: Text("SalesPerson"),
+              leading: Icon(EvaIcons.person),
+              onTap: () {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => Sales()));
               },
             ),
             SizedBox(height: 20),
