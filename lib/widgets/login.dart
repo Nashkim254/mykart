@@ -1,121 +1,190 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mykart/homePage.dart';
-import 'package:mykart/services/auth.dart';
+import 'package:flutter/services.dart';
+import 'package:mykart/widgets/changescreen.dart';
+import 'package:mykart/widgets/mybutton.dart';
+import 'package:mykart/widgets/mytextformfield.dart';
+import 'package:mykart/widgets/passwordtextfield.dart';
 import 'package:mykart/widgets/signup.dart';
 
 class Login extends StatefulWidget {
-    final Function toggleView;
-  Login(this.toggleView);
   @override
   _LoginState createState() => _LoginState();
 }
 
+final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+bool isLoading = false;
+String p =
+    r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
+
+RegExp regExp = new RegExp(p);
+final TextEditingController email = TextEditingController();
+final TextEditingController userName = TextEditingController();
+final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+final TextEditingController password = TextEditingController();
+
+bool obserText = true;
+
 class _LoginState extends State<Login> {
-  final formKey = GlobalKey<FormState>();
-  AuthService authService;
-  TextEditingController emailEditingController = TextEditingController();
-  TextEditingController passwordEditingController = TextEditingController();
-  void signIn() async {
-    if (formKey.currentState.validate()) {
-      await authService.signInWithEmailAndPassword(
-          emailEditingController.text, passwordEditingController.text).then((result)async{
-            if(result != null){
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>HomePage()));
-            }
-          });
+  void submit(context) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      UserCredential result = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+              email: email.text, password: password.text);
+      print(result);
+    } on PlatformException catch (error) {
+      var message = "Please Check Your Internet Connection ";
+      if (error.message != null) {
+        message = error.message;
+      }
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text(message.toString()),
+          duration: Duration(milliseconds: 800),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+      );
+      setState(() {
+        isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        isLoading = false;
+      });
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: Text(error.toString()),
+        duration: Duration(milliseconds: 800),
+        backgroundColor: Theme.of(context).primaryColor,
+      ));
     }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void vaildation() async {
+    if (email.text.isEmpty && password.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Both Flied Are Empty"),
+        ),
+      );
+    } else if (email.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Email Is Empty"),
+        ),
+      );
+    } else if (!regExp.hasMatch(email.text)) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Please Try Vaild Email"),
+        ),
+      );
+    } else if (password.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Password Is Empty"),
+        ),
+      );
+    } else if (password.text.length < 8) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Password  Is Too Short"),
+        ),
+      );
+    } else {
+      submit(context);
+    }
+  }
+
+  Widget _buildAllPart() {
+    return Expanded(
+      flex: 3,
+      child: Container(
+        width: double.infinity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Column(
+              children: <Widget>[
+                Text(
+                  "Login",
+                  style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+                MyTextFormField(
+                  name: "Email",
+                  controller: email,
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+                PasswordTextFormField(
+                  obserText: obserText,
+                  name: "Password",
+                  controller: password,
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    setState(() {
+                      obserText = !obserText;
+                    });
+                  },
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+                isLoading == false
+                    ? MyButton(
+                        onPressed: () {
+                          vaildation();
+                        },
+                        name: "Login",
+                      )
+                    : Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                SizedBox(
+                  height: 10,
+                ),
+                ChangeScreen(
+                    name: "SignUp",
+                    whichAccount: "I Have Not Account!",
+                    onTap: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (ctx) => SignUp(),
+                        ),
+                      );
+                    }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('login'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: ListView(
-          children: [
-            Spacer(),
-            Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  SizedBox(height: 50.0),
-                  TextFormField(
-                    validator: (val) {
-                      return RegExp(
-                                  r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                              .hasMatch(val)
-                          ? null
-                          : "Please Enter Correct Email";
-                    },
-                    controller: emailEditingController,
-                  ),
-                  TextFormField(
-                    obscureText: true,
-                    validator: (val) {
-                      return val.length > 6
-                          ? null
-                          : "Enter Password 6+ characters";
-                    },
-                    controller: passwordEditingController,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.0),
-            GestureDetector(
-              onTap: () {
-                signIn();
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xff007EF4),
-                        const Color(0xff2A75BC),
-                      ],
-                    )),
-                width: MediaQuery.of(context).size.width,
-                child: Text(
-                  "Sign In",
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 16,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Don't have account? ",
-                ),
-                GestureDetector(
-                  onTap: () {
-                   widget.toggleView();
-                  },
-                  child: Text(
-                    "Register now",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        decoration: TextDecoration.underline),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      key: _scaffoldKey,
+      body: Form(
+        key: _formKey,
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _buildAllPart(),
+            ],
+          ),
         ),
       ),
     );

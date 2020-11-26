@@ -4,15 +4,58 @@ import 'package:eva_icons_flutter/eva_icons_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mykart/models/signup_model.dart';
+import 'package:mykart/services/product_provider.dart';
+import 'package:mykart/widgets/about.dart';
 import 'package:mykart/widgets/all_pdt.dart';
 import 'package:mykart/widgets/categoryItem.dart';
+import 'package:mykart/widgets/contactus.dart';
+import 'package:mykart/widgets/profilescreen.dart';
 import 'package:mykart/widgets/sales_person.dart';
+import 'package:provider/provider.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final FirebaseAuth auth;
   final FirebaseFirestore firestore;
   HomePage({this.auth, this.firestore});
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+ProductProvider productProvider;
+class _HomePageState extends State<HomePage> {
+  Widget _buildUserAccountsDrawerHeader() {
+    List<UserModel> userModel = productProvider.userModelList;
+    return Column(
+        children: userModel.map((e) {
+      return UserAccountsDrawerHeader(
+        accountName: Text(
+          e.userName,
+          style: TextStyle(color: Colors.black),
+        ),
+        currentAccountPicture: CircleAvatar(
+          backgroundColor: Colors.white,
+          backgroundImage: e.userImage == null
+              ? AssetImage("images/userImage.png")
+              : NetworkImage(e.userImage),
+        ),
+        decoration: BoxDecoration(color: Color(0xfff2f2f2)),
+        accountEmail: Text(e.userEmail, style: TextStyle(color: Colors.black)),
+      );
+    }).toList());
+  }
+  double height, width;
+  bool homeColor = true;
+
+  bool checkoutColor = false;
+
+  bool aboutColor = false;
+
+  bool contactUsColor = false;
+  bool profileColor = false;
+  MediaQueryData mediaQuery;
   final GlobalKey<ScaffoldState> drawerKey = GlobalKey();
+
   final List bannerAdSlider = [
     "assets/banner1.jpg",
     "assets/banner2.jpg",
@@ -26,6 +69,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    productProvider = Provider.of<ProductProvider>(context);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.white,
       statusBarBrightness: Brightness.light,
@@ -68,52 +112,75 @@ class HomePage extends StatelessWidget {
       drawer: Drawer(
         child: ListView(
           children: <Widget>[
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              accountEmail: Text(
-                "person@mail.com",
-                style: TextStyle(
-                  color: Colors.black,
-                ),
-              ),
-              accountName: Text(
-                "Nancy",
-                style: TextStyle(
-                  color: Colors.black,
-                ),
-              ),
-              currentAccountPicture: ClipRRect(
-                borderRadius: BorderRadius.circular(70),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white,
-                ),
-              ),
-            ),
+            _buildUserAccountsDrawerHeader(),
             SizedBox(height: 10),
             ListTile(
               title: Text("Home"),
+              
               leading: Icon(EvaIcons.homeOutline),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              selected: checkoutColor,
+            onTap: () {
+              setState(() {
+                checkoutColor = true;
+                contactUsColor = false;
+                homeColor = false;
+                profileColor = false;
+                aboutColor = false;
+              });
+              Navigator.pop(context);
+            }
             ),
+               ListTile(
+            selected: contactUsColor,
+            onTap: () {
+              setState(() {
+                contactUsColor = true;
+                checkoutColor = false;
+                profileColor = false;
+                homeColor = false;
+                aboutColor = false;
+              });
+              Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (ctx) => ContactUs()));
+            },
+            leading: Icon(Icons.phone),
+            title: Text("Contant Us"),
+          ),
+            
             SizedBox(height: 10),
             ListTile(
-              title: Text("Account"),
+              title: Text("Profile"),
               leading: Icon(EvaIcons.personOutline),
+              selected: profileColor,
               onTap: () {
-                Navigator.pushNamed(context, '');
+              setState(() {
+                aboutColor = false;
+                contactUsColor = false;
+                homeColor = false;
+                profileColor = true;
+                checkoutColor = false;
+              });
+                Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (ctx) => ProfileScreen(),
+                ),
+              );
               },
             ),
             SizedBox(height: 10),
             ListTile(
-              title: Text("Admin"),
-              leading: Icon(Icons.account_circle),
+              title: Text("About"),
+              leading: Icon(Icons.info_outline,),
               onTap: () {
-                Navigator.pushNamed(context, '');
+                 setState(() {
+                aboutColor = true;
+                contactUsColor = false;
+                homeColor = false;
+                profileColor = false;
+                checkoutColor = false;
+              });
+              Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (ctx) => About()));
               },
             ),
             SizedBox(height: 10),
@@ -125,6 +192,13 @@ class HomePage extends StatelessWidget {
                     context, MaterialPageRoute(builder: (_) => Sales()));
               },
             ),
+            ListTile(
+            onTap: () {
+              FirebaseAuth.instance.signOut();
+            },
+            leading: Icon(Icons.exit_to_app),
+            title: Text("Logout"),
+          ),
             SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),

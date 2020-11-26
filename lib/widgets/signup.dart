@@ -1,152 +1,282 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+import 'package:mykart/homePage.dart';
+import 'package:mykart/widgets/changescreen.dart';
+import 'package:mykart/widgets/login.dart';
+import 'package:mykart/widgets/mybutton.dart';
+import 'package:mykart/widgets/mytextformfield.dart';
+import 'package:mykart/widgets/passwordtextfield.dart';
 
-class Signup extends StatefulWidget {
-    final Function toggleView;
-  Signup(this.toggleView);
+class SignUp extends StatefulWidget {
   @override
-  _SignupState createState() => _SignupState();
+  _SignUpState createState() => _SignUpState();
 }
 
-class _SignupState extends State<Signup> {
-  final _signKey = GlobalKey<FormState>();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passController = TextEditingController();
-  TextEditingController usernameController = TextEditingController();
+final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+String p =
+    r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
 
-  singUp() async {
-    if (_signKey.currentState.validate()) {
-      await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-              email: emailController.text,
-              password: passController.text)
-          .then((result) {
-        if (result != null) {
-          FirebaseFirestore.instance
-              .collection("users")
-              .doc(result.user.uid)
-              .set({
-            "uid": result.user.uid,
-            "userName": usernameController.text,
-            "userEmail": result.user.email,
-          }).catchError((e) {
-            print(e);
-          });
-        }
+RegExp regExp = new RegExp(p);
+bool obserText = true;
+final TextEditingController email = TextEditingController();
+final TextEditingController userName = TextEditingController();
+final TextEditingController phoneNumber = TextEditingController();
+final TextEditingController password = TextEditingController();
+final TextEditingController address = TextEditingController();
+
+bool isMale = true;
+bool isLoading = false;
+
+class _SignUpState extends State<SignUp> {
+  void submit() async {
+    UserCredential result;
+    try {
+      setState(() {
+        isLoading = true;
       });
+      result = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email.text, password: password.text);
+      print(result);
+    } on PlatformException catch (error) {
+      var message = "Please Check Your Internet Connection ";
+      if (error.message != null) {
+        message = error.message;
+      }
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: Text(message.toString()),
+        duration: Duration(milliseconds: 600),
+        backgroundColor: Theme.of(context).primaryColor,
+      ));
+      setState(() {
+        isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        isLoading = false;
+      });
+      _scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: Text(error.toString()),
+        duration: Duration(milliseconds: 600),
+        backgroundColor: Theme.of(context).primaryColor,
+      ));
+
+      print(error);
     }
+    FirebaseFirestore.instance.collection("User").doc(result.user.uid).set({
+      "UserName": userName.text,
+      "UserId": result.user.uid,
+      "UserEmail": email.text,
+      "UserAddress": address.text,
+      "UserGender": isMale == true ? "Male" : "Female",
+      "UserNumber": phoneNumber.text,
+    });
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (ctx) => HomePage()));
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void vaildation() async {
+    if (userName.text.isEmpty &&
+        email.text.isEmpty &&
+        password.text.isEmpty &&
+        phoneNumber.text.isEmpty &&
+        address.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("All Flied Are Empty"),
+        ),
+      );
+    } else if (userName.text.length < 6) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Name Must Be 6 "),
+        ),
+      );
+    } else if (email.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Email Is Empty"),
+        ),
+      );
+    } else if (!regExp.hasMatch(email.text)) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Please Try Vaild Email"),
+        ),
+      );
+    } else if (password.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Password Is Empty"),
+        ),
+      );
+    } else if (password.text.length < 8) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Password  Is Too Short"),
+        ),
+      );
+    } else if (phoneNumber.text.length < 10 || phoneNumber.text.length > 10) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Phone Number Must Be 10 "),
+        ),
+      );
+    } else if (address.text.isEmpty) {
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text("Adress Is Empty "),
+        ),
+      );
+    } else {
+      submit();
+    }
+  }
+
+  Widget _buildAllTextFormField() {
+    return Container(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: <Widget>[
+          MyTextFormField(
+            name: "UserName",
+            controller: userName,
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          MyTextFormField(
+            name: "Email",
+            controller: email,
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          PasswordTextFormField(
+            obserText: obserText,
+            controller: password,
+            name: "Password",
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              setState(() {
+                obserText = !obserText;
+              });
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                isMale = !isMale;
+              });
+            },
+            child: Container(
+              height: 60,
+              padding: EdgeInsets.only(left: 10),
+              width: double.infinity,
+              decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
+              child: Center(
+                child: Row(
+                  children: [
+                    Text(
+                      isMale == true ? "Male" : "Female",
+                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          MyTextFormField(
+            name: "Phone Number",
+            controller: phoneNumber,
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          MyTextFormField(
+            name: "Address",
+            controller: address,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomPart() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 10),
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: <Widget>[
+          _buildAllTextFormField(),
+          SizedBox(
+            height: 10,
+          ),
+          isLoading == false
+              ? MyButton(
+                  name: "SignUp",
+                  onPressed: () {
+                    vaildation();
+                  },
+                )
+              : Center(
+                  child: CircularProgressIndicator(),
+                ),
+          ChangeScreen(
+            name: "Login",
+            whichAccount: "I Have Already An Account!",
+            onTap: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (ctx) => Login(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Sign up'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.0),
-        child: ListView(
-          children: [
-            Spacer(),
-            Form(
-              key: _signKey,
-              child: Column(
-                children: <Widget>[
-                  TextFormField(
-                    controller: usernameController,
-                    validator: (val) {
-                      return val.isEmpty || val.length < 3
-                          ? "Enter Username 3+ characters"
-                          : null;
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Enter username here',
-                      labelText: 'Username',
-                    ),
+      key: _scaffoldKey,
+      body: ListView(
+        children: [
+          Container(
+            height: 200,
+         
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  "Register",
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
                   ),
-                  TextFormField(
-                    validator: (val) {
-                      return RegExp(
-                                  r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                              .hasMatch(val)
-                          ? null
-                          : "Enter correct email";
-                    },
-                    controller: emailController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter email here',
-                      labelText: 'Email',
-                    ),
-                  ),
-                  TextFormField(
-                    validator: (val) {
-                      return val.length < 6
-                          ? "Enter Password 6+ characters"
-                          : null;
-                    },
-                    controller: passController,
-                    decoration: InputDecoration(
-                        hintText: 'Enter password here', labelText: 'Password'),
-                  ),
-                  SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: () {
-                      singUp();
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xff007EF4),
-                              const Color(0xff2A75BC)
-                            ],
-                          )),
-                      width: MediaQuery.of(context).size.width,
-                      child: Text(
-                        "Sign Up",
-                        style: GoogleFonts.mcLaren(),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 16,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Already have an account? ",
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/login');
-                        },
-                        child: Text(
-                          "SignIn now",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              decoration: TextDecoration.underline),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Container(
+            height: 500,
+            child: _buildBottomPart(),
+          ),
+        ],
       ),
     );
   }
